@@ -142,6 +142,7 @@ func tryReferrerFromSBOM(r io.Reader) (referrer, error) {
 		}
 		anns = map[string]string{
 			annotationKeyDescription: "CycloneDX JSON SBOM",
+			annotationKeyCreated:     time.Now().Format(time.RFC3339),
 		}
 		mediaType = mediaKeyCycloneDX
 
@@ -152,6 +153,7 @@ func tryReferrerFromSBOM(r io.Reader) (referrer, error) {
 		}
 		anns = map[string]string{
 			annotationKeyDescription: "SPDX JSON SBOM",
+			annotationKeyCreated:     time.Now().Format(time.RFC3339),
 		}
 		mediaType = mediaKeySPDX
 
