@@ -56,7 +56,6 @@ type referrer struct {
 	mediaType       ctypes.MediaType
 	bytes           []byte
 	targetReference name.Reference
-	targetDesc      v1.Descriptor
 }
 
 func (r *referrer) Image() (v1.Image, error) {
@@ -67,10 +66,15 @@ func (r *referrer) Image() (v1.Image, error) {
 		return nil, fmt.Errorf("error appending layer: %w", err)
 	}
 
-	img = mutate.MediaType(img, r.targetDesc.MediaType)
+	targetDesc, err := remote.Head(r.targetReference, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, fmt.Errorf("error getting descriptor: %w", err)
+	}
+
+	img = mutate.MediaType(img, targetDesc.MediaType)
 	img = mutate.ConfigMediaType(img, r.mediaType)
 	img = mutate.Annotations(img, r.annotations).(v1.Image)
-	img = mutate.Subject(img, r.targetDesc).(v1.Image)
+	img = mutate.Subject(img, *targetDesc).(v1.Image)
 
 	return img, nil
 }
@@ -189,11 +193,6 @@ func tryReferrerFromSBOM(r io.Reader, opts options) (referrer, error) {
 
 	log.Logger.Infof("SBOM detected: %s", format)
 
-	targetDesc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return referrer{}, fmt.Errorf("error getting descriptor: %w", err)
-	}
-
 	anns = lo.Assign(anns, opts.Annotations)
 
 	return referrer{
@@ -201,7 +200,6 @@ func tryReferrerFromSBOM(r io.Reader, opts options) (referrer, error) {
 		mediaType:       mediaType,
 		bytes:           b,
 		targetReference: ref,
-		targetDesc:      *targetDesc,
 	}, nil
 }
 
@@ -234,10 +232,7 @@ func tryReferrerFromSarif(r io.Reader, opts options) (referrer, error) {
 		return referrer{}, fmt.Errorf("error parsing subject: %w", err)
 	}
 
-	targetDesc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return referrer{}, fmt.Errorf("error getting descriptor: %w", err)
-	}
+	log.Logger.Infof("SARIF detected")
 
 	anns := map[string]string{
 		annotationKeyDescription: "SARIF",
@@ -250,7 +245,6 @@ func tryReferrerFromSarif(r io.Reader, opts options) (referrer, error) {
 		mediaType:       ctypes.MediaType(mediaKeySARIF),
 		bytes:           b,
 		targetReference: ref,
-		targetDesc:      *targetDesc,
 	}, nil
 }
 
@@ -283,11 +277,6 @@ func tryReferrerFromVulnerability(r io.Reader, opts options) (referrer, error) {
 		}
 	}
 
-	targetDesc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return referrer{}, fmt.Errorf("error fetching target descriptor: %w", err)
-	}
-
 	log.Logger.Infof("Cosign vulnerability data detected")
 
 	anns := map[string]string{
@@ -301,7 +290,6 @@ func tryReferrerFromVulnerability(r io.Reader, opts options) (referrer, error) {
 		mediaType:       ctypes.MediaType(mediaKeyCosignVuln),
 		bytes:           b,
 		targetReference: ref,
-		targetDesc:      *targetDesc,
 	}, nil
 }
 
