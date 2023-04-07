@@ -163,7 +163,7 @@ func tryReferrerFromSBOM(r io.Reader) (referrer, error) {
 
 	log.Logger.Infof("SBOM detected: %s", format)
 
-	targetDesc, err := remote.Head(repo)
+	targetDesc, err := remote.Head(repo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return referrer{}, fmt.Errorf("error getting descriptor: %w", err)
 	}
@@ -198,7 +198,7 @@ func tryReferrerFromVulnerability(r io.Reader) (referrer, error) {
 		return referrer{}, fmt.Errorf("error creating new digest: %w", err)
 	}
 
-	targetDesc, err := remote.Head(repo)
+	targetDesc, err := remote.Head(repo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return referrer{}, fmt.Errorf("error fetching target descriptor: %w", err)
 	}
