@@ -87,7 +87,7 @@ func fetchTargetDigest(subject string) (name.Digest, error) {
 		return name.Digest{}, fmt.Errorf("error parsing reference: %w", err)
 	}
 
-	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	desc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error getting descriptor: %w", err)
 	}
