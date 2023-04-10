@@ -15,6 +15,12 @@ type putOptions struct {
 	Subject     string
 }
 
+type getOptions struct {
+	Type    string
+	Subject string
+	Digest  string
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Short: "A Trivy plugin for oci referrers",
@@ -96,6 +102,60 @@ func main() {
 	putCmd.Flags().StringP("subject", "", "", "set the subject to a reference (If the value is not set, it will attempt to detect it automatically from the input)")
 
 	rootCmd.AddCommand(putCmd)
+
+	getCmd := &cobra.Command{
+		Use:   "get",
+		Short: "get a referrer",
+		Example: `  $ trivy referrer get --type cyclonedx --subject YOUR_IMAGE
+  $ trivy referrer get --digest ARTIFACT_DIGEST`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			output := cmd.Flags().Lookup("output").Value.String()
+			var writer io.Writer
+			if output == "" {
+				writer = os.Stdout
+			} else {
+				fp, err := os.Create(output)
+				if err != nil {
+					return fmt.Errorf("error creating file: %w", err)
+				}
+				defer fp.Close()
+
+				writer = fp
+			}
+
+			digest, err := cmd.Flags().GetString("digest")
+			if err != nil {
+				return fmt.Errorf("error getting digest: %w", err)
+			}
+
+			subject, err := cmd.Flags().GetString("subject")
+			if err != nil {
+				return fmt.Errorf("error getting subject: %w", err)
+			}
+
+			t, err := cmd.Flags().GetString("type")
+			if err != nil {
+				return fmt.Errorf("error getting file path: %w", err)
+			}
+
+			err = getReferrer(writer, getOptions{
+				Type:    t,
+				Subject: subject,
+				Digest:  digest,
+			})
+			if err != nil {
+				return fmt.Errorf("error getting referrer: %w", err)
+			}
+
+			return nil
+		},
+	}
+	getCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
+	getCmd.Flags().StringP("subject", "", "", "get a referrer for the subject reference.")
+	getCmd.Flags().StringP("digest", "", "", "artifact digest")
+	getCmd.Flags().StringP("output", "o", "", "output file name")
+
+	rootCmd.AddCommand(getCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Logger.Fatal(err)
