@@ -18,6 +18,7 @@ type putOptions struct {
 type getOptions struct {
 	Type      string
 	Reference string
+	Digest    string
 }
 
 type listOptions struct {
@@ -118,11 +119,11 @@ func main() {
 	rootCmd.AddCommand(putCmd)
 
 	getCmd := &cobra.Command{
-		Use:   "get REFERENCE",
-		Short: "get a referrer",
+		Use:   "get YOUR_IMAGE",
+		Short: "get the referrer's artifact",
 		Args:  cobra.ExactArgs(1),
 		Example: `  $ trivy referrer get --type cyclonedx YOUR_IMAGE
-  $ trivy referrer get ARTIFACT_DIGEST`,
+  $ trivy referrer get --digest DIGEST YOUR_IMAGE`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			output := cmd.Flags().Lookup("output").Value.String()
 			var writer io.Writer
@@ -143,8 +144,14 @@ func main() {
 				return fmt.Errorf("error getting file path: %w", err)
 			}
 
+			digest, err := cmd.Flags().GetString("digest")
+			if err != nil {
+				return fmt.Errorf("error getting digest: %w", err)
+			}
+
 			err = getReferrer(writer, getOptions{
 				Type:      t,
+				Digest:    digest,
 				Reference: args[0],
 			})
 			if err != nil {
@@ -155,6 +162,7 @@ func main() {
 		},
 	}
 	getCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
+	getCmd.Flags().StringP("digest", "", "", "referrer digest")
 	getCmd.Flags().StringP("output", "o", "", "output file name")
 
 	rootCmd.AddCommand(getCmd)

@@ -67,9 +67,9 @@ func listReferrers(writer io.Writer, opts listOptions) error {
 {{- $registry := .Registry }}
 {{- $repository := .Repository }}
 Referrers:	 {{ range $index, $descriptor := .Index.Manifests }}
+  Digest:	{{ $descriptor.Digest }}
   Reference:	{{ $registry }}/{{ $repository }}@{{ $descriptor.Digest }}
   MediaType:	{{ $descriptor.MediaType }}
-  Digest:	{{ $descriptor.Digest }}
   ArtifactType:	{{ $descriptor.ArtifactType }}
   {{- if $descriptor.Annotations }}
   Annotations:	{{ range $key, $value := $descriptor.Annotations }}
