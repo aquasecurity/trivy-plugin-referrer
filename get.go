@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/aquasecurity/trivy/pkg/log"
@@ -97,8 +98,13 @@ func findArtifactDigest(digest name.Digest, opts getOptions) (name.Digest, error
 }
 
 func findReferrerByDigest(index *v1.IndexManifest, opts getOptions) (v1.Descriptor, error) {
+	digest := opts.Digest
+	if !strings.HasPrefix(digest, "sha256:") {
+		digest = "sha256:" + digest
+	}
+
 	m, found := lo.Find(index.Manifests, func(item v1.Descriptor) bool {
-		return item.Digest.String() == opts.Digest
+		return strings.HasPrefix(item.Digest.String(), digest)
 	})
 	if !found {
 		return v1.Descriptor{}, errNoReferrerFound

@@ -162,7 +162,7 @@ func main() {
 		},
 	}
 	getCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
-	getCmd.Flags().StringP("digest", "", "", "referrer digest")
+	getCmd.Flags().StringP("digest", "", "", "referrer digest. If the length of the digest is only partial, search for artifacts with matching prefixes")
 	getCmd.Flags().StringP("output", "o", "", "output file name")
 
 	rootCmd.AddCommand(getCmd)
