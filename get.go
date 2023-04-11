@@ -93,18 +93,9 @@ func artifactDigestFromTargetDigest(digest name.Digest, opts getOptions) (name.D
 }
 
 func findLatestReferrer(index *v1.IndexManifest, opts getOptions) (v1.Descriptor, error) {
-	var artifactType string
-	switch opts.Type {
-	case "cyclonedx":
-		artifactType = mediaKeyCycloneDX
-	case "spdx-json":
-		artifactType = mediaKeySPDX
-	case "sarif":
-		artifactType = mediaKeySARIF
-	case "cosign-vuln":
-		artifactType = mediaKeyCosignVuln
-	default:
-		return v1.Descriptor{}, fmt.Errorf("unknown type: %s", opts.Type)
+	artifactType, err := getArtifactType(opts.Type)
+	if err != nil {
+		return v1.Descriptor{}, fmt.Errorf("error getting artifact type: %w", err)
 	}
 
 	filtered := lo.Filter(index.Manifests, func(item v1.Descriptor, index int) bool {

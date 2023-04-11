@@ -20,6 +20,25 @@ type getOptions struct {
 	Reference string
 }
 
+type listOptions struct {
+	Type              string
+	Subject           string
+	Format            string
+	FilterAnnotations map[string]string
+}
+
+func keyValueSliceToMap(s []string) (map[string]string, error) {
+	m := make(map[string]string, len(s))
+	for _, kv := range s {
+		parts := strings.Split(kv, "=")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid key-value pair: %s", kv)
+		}
+		m[parts[0]] = parts[1]
+	}
+	return m, nil
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Short: "A Trivy plugin for oci referrers",
@@ -79,13 +98,9 @@ func main() {
 				return fmt.Errorf("error getting annotations: %w", err)
 			}
 
-			ann := make(map[string]string, len(annList))
-			for _, a := range annList {
-				kv := strings.Split(a, "=")
-				if len(kv) != 2 {
-					return fmt.Errorf("invalid annotation: %s", a)
-				}
-				ann[kv[0]] = kv[1]
+			ann, err := keyValueSliceToMap(annList)
+			if err != nil {
+				return fmt.Errorf("error parsing annotations: %w", err)
 			}
 
 			err = putReferrer(reader, putOptions{Annotations: ann, Subject: subject})
@@ -143,6 +158,66 @@ func main() {
 	getCmd.Flags().StringP("output", "o", "", "output file name")
 
 	rootCmd.AddCommand(getCmd)
+
+	listCmd := &cobra.Command{
+		Use:     "list",
+		Short:   "list referrers",
+		Example: `  $ trivy referrer list YOUR_IMAGE`,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			output := cmd.Flags().Lookup("output").Value.String()
+			var writer io.Writer
+			if output == "" {
+				writer = os.Stdout
+			} else {
+				fp, err := os.Create(output)
+				if err != nil {
+					return fmt.Errorf("error creating file: %w", err)
+				}
+				defer fp.Close()
+
+				writer = fp
+			}
+
+			t, err := cmd.Flags().GetString("type")
+			if err != nil {
+				return fmt.Errorf("error getting file path: %w", err)
+			}
+
+			format, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return fmt.Errorf("error getting format: %w", err)
+			}
+
+			annList, err := cmd.Flags().GetStringSlice("filter-annotation")
+			if err != nil {
+				return fmt.Errorf("error getting filter-annotations: %w", err)
+			}
+
+			ann, err := keyValueSliceToMap(annList)
+			if err != nil {
+				return fmt.Errorf("invalid annotation: %w", err)
+			}
+
+			err = listReferrers(writer, listOptions{
+				Type:              t,
+				Subject:           args[0],
+				Format:            format,
+				FilterAnnotations: ann,
+			})
+			if err != nil {
+				return fmt.Errorf("error getting referrer: %w", err)
+			}
+
+			return nil
+		},
+	}
+	listCmd.Flags().StringSliceP("filter-annotation", "", nil, "filter annotations associated with the artifact (can specify multiple or separate values with commas: key1=path1,key2=path2)")
+	listCmd.Flags().StringP("format", "", "", "format (json)")
+	listCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
+	listCmd.Flags().StringP("output", "o", "", "output file name")
+
+	rootCmd.AddCommand(listCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Logger.Fatal(err)
