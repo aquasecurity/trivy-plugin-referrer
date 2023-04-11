@@ -22,6 +22,7 @@ require (
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v23.0.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
+	github.com/fatih/color v1.15.0 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -32,6 +33,8 @@ require (
 	github.com/knqyf263/go-rpm-version v0.0.0-20220614171824-631e686d1075 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/masahiro331/go-xfs-filesystem v0.0.0-20221225060805-c02764233454 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

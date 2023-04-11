@@ -221,7 +221,7 @@ func main() {
 		},
 	}
 	listCmd.Flags().StringSliceP("filter-annotation", "", nil, "filter annotations associated with the artifact (can specify multiple or separate values with commas: key1=path1,key2=path2)")
-	listCmd.Flags().StringP("format", "", "", "format (json)")
+	listCmd.Flags().StringP("format", "", "", "format (json, oneline)")
 	listCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
 	listCmd.Flags().StringP("output", "o", "", "output file name")
 

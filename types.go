@@ -17,17 +17,60 @@ const (
 	mediaKeyCosignVuln = "application/json"
 )
 
-func getArtifactType(mediaType string) (string, error) {
-	switch mediaType {
-	case "cyclonedx":
-		return mediaKeyCycloneDX, nil
-	case "spdx-json":
-		return mediaKeySPDX, nil
-	case "sarif":
-		return mediaKeySARIF, nil
-	case "cosign-vuln":
-		return mediaKeyCosignVuln, nil
+type ArtifactType string
+
+const (
+	CycloneDX  ArtifactType = "cyclonedx"
+	SPDXJSON   ArtifactType = "spdx-json"
+	SARIF      ArtifactType = "sarif"
+	CosignVuln ArtifactType = "cosign-vuln"
+)
+
+func (at ArtifactType) String() string {
+	return string(at)
+}
+
+func (at ArtifactType) MediaType() string {
+	switch at {
+	case CycloneDX:
+		return mediaKeyCycloneDX
+	case SPDXJSON:
+		return mediaKeySPDX
+	case SARIF:
+		return mediaKeySARIF
+	case CosignVuln:
+		return mediaKeyCosignVuln
 	default:
-		return "", fmt.Errorf("unknown media type: %s", mediaType)
+		return ""
+	}
+}
+
+func artifactTypeFromName(name string) (ArtifactType, error) {
+	switch name {
+	case CycloneDX.String():
+		return CycloneDX, nil
+	case SPDXJSON.String():
+		return SPDXJSON, nil
+	case SARIF.String():
+		return SARIF, nil
+	case CosignVuln.String():
+		return CosignVuln, nil
+	default:
+		return "", fmt.Errorf("unknown artifact name: " + name)
+	}
+}
+
+func artifactTypeFromMediaType(mediaType string) (ArtifactType, error) {
+	switch mediaType {
+	case mediaKeyCycloneDX:
+		return CycloneDX, nil
+	case mediaKeySPDX:
+		return SPDXJSON, nil
+	case mediaKeySARIF:
+		return SARIF, nil
+	case mediaKeyCosignVuln:
+		return CosignVuln, nil
+	default:
+		return "", fmt.Errorf("unknown media type: " + mediaType)
 	}
 }
