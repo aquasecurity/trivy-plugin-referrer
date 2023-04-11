@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -19,18 +20,36 @@ func getReferrer(writer io.Writer, opts getOptions) error {
 	var err error
 	var artifactDigest name.Digest
 
-	if opts.Digest != "" {
-		artifactDigest, err = name.NewDigest(opts.Digest)
-		if err != nil {
-			return fmt.Errorf("error parsing digest: %w", err)
+	ref, err := name.ParseReference(opts.Reference)
+	if err != nil {
+		return fmt.Errorf("error parsing reference: %w", err)
+	}
+
+	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return fmt.Errorf("error getting descriptor: %w", err)
+	}
+
+	digest, err := name.NewDigest(
+		fmt.Sprintf("%s/%s@%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr(), desc.Digest.String()),
+	)
+	if err != nil {
+		return fmt.Errorf("error creating digest: %w", err)
+	}
+
+	// If the manifest contains an artifactType, download it.
+	// If not, find an artifact within the subject’s referrers.
+	if desc.ArtifactType != "" {
+		artifactDigest = digest
+	} else {
+		artifactDigest, err = artifactDigestFromTargetDigest(digest, opts)
+		if errors.Is(err, errNoReferrerFound) {
+			log.Logger.Infof("no referrer found(%s)", opts.Type)
+			return nil
 		}
-	} else if opts.Subject != "" {
-		artifactDigest, err = artifactDigestFromSubject(opts)
 		if err != nil {
 			return fmt.Errorf("error getting artifact digest: %w", err)
 		}
-	} else {
-		return fmt.Errorf("digest or subject is required")
 	}
 
 	image, err := remote.Image(artifactDigest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
@@ -53,53 +72,24 @@ func getReferrer(writer io.Writer, opts getOptions) error {
 	return nil
 }
 
-func artifactDigestFromSubject(opts getOptions) (name.Digest, error) {
-	targetDigest, err := fetchTargetDigest(opts.Subject)
-	if err != nil {
-		return name.Digest{}, fmt.Errorf("error getting digest: %w", err)
-	}
-
-	index, err := remote.Referrers(targetDigest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+func artifactDigestFromTargetDigest(digest name.Digest, opts getOptions) (name.Digest, error) {
+	index, err := remote.Referrers(digest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error fetching referrers: %w", err)
 	}
 
 	manifest, err := findLatestReferrer(index, opts)
-	if err == errNoReferrerFound {
-		log.Logger.Infof("no referrer found(%s)", opts.Type)
-		return name.Digest{}, nil
-	} else if err != nil {
+	if err != nil {
 		return name.Digest{}, fmt.Errorf("error fetching referrers: %w", err)
 	}
 
 	artifactDigest, err := name.NewDigest(
-		fmt.Sprintf("%s/%s@%s", targetDigest.Context().RegistryStr(), targetDigest.Context().RepositoryStr(), manifest.Digest.String()),
+		fmt.Sprintf("%s/%s@%s", digest.Context().RegistryStr(), digest.Context().RepositoryStr(), manifest.Digest.String()),
 	)
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error parsing artifact tag: %w", err)
 	}
 	return artifactDigest, nil
-}
-
-func fetchTargetDigest(subject string) (name.Digest, error) {
-	ref, err := name.ParseReference(subject)
-	if err != nil {
-		return name.Digest{}, fmt.Errorf("error parsing reference: %w", err)
-	}
-
-	desc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return name.Digest{}, fmt.Errorf("error getting descriptor: %w", err)
-	}
-
-	digest, err := name.NewDigest(
-		fmt.Sprintf("%s/%s@%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr(), desc.Digest.String()),
-	)
-	if err != nil {
-		return name.Digest{}, fmt.Errorf("error creating digest: %w", err)
-	}
-
-	return digest, nil
 }
 
 func findLatestReferrer(index *v1.IndexManifest, opts getOptions) (v1.Descriptor, error) {

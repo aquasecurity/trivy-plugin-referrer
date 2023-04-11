@@ -16,9 +16,8 @@ type putOptions struct {
 }
 
 type getOptions struct {
-	Type    string
-	Subject string
-	Digest  string
+	Type      string
+	Reference string
 }
 
 func main() {
@@ -104,10 +103,11 @@ func main() {
 	rootCmd.AddCommand(putCmd)
 
 	getCmd := &cobra.Command{
-		Use:   "get",
+		Use:   "get REFERENCE",
 		Short: "get a referrer",
-		Example: `  $ trivy referrer get --type cyclonedx --subject YOUR_IMAGE
-  $ trivy referrer get --digest ARTIFACT_DIGEST`,
+		Args:  cobra.ExactArgs(1),
+		Example: `  $ trivy referrer get --type cyclonedx YOUR_IMAGE
+  $ trivy referrer get ARTIFACT_DIGEST`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			output := cmd.Flags().Lookup("output").Value.String()
 			var writer io.Writer
@@ -123,25 +123,14 @@ func main() {
 				writer = fp
 			}
 
-			digest, err := cmd.Flags().GetString("digest")
-			if err != nil {
-				return fmt.Errorf("error getting digest: %w", err)
-			}
-
-			subject, err := cmd.Flags().GetString("subject")
-			if err != nil {
-				return fmt.Errorf("error getting subject: %w", err)
-			}
-
 			t, err := cmd.Flags().GetString("type")
 			if err != nil {
 				return fmt.Errorf("error getting file path: %w", err)
 			}
 
 			err = getReferrer(writer, getOptions{
-				Type:    t,
-				Subject: subject,
-				Digest:  digest,
+				Type:      t,
+				Reference: args[0],
 			})
 			if err != nil {
 				return fmt.Errorf("error getting referrer: %w", err)
@@ -151,8 +140,6 @@ func main() {
 		},
 	}
 	getCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
-	getCmd.Flags().StringP("subject", "", "", "get a referrer for the subject reference.")
-	getCmd.Flags().StringP("digest", "", "", "artifact digest")
 	getCmd.Flags().StringP("output", "o", "", "output file name")
 
 	rootCmd.AddCommand(getCmd)
