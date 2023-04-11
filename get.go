@@ -39,7 +39,7 @@ func getReferrer(writer io.Writer, opts getOptions) error {
 
 	// If the manifest contains an artifactType, download it.
 	// If not, find an artifact within the subject’s referrers.
-	if desc.ArtifactType != "" {
+	if desc.ArtifactType != "" && opts.Type == "" {
 		artifactDigest = digest
 	} else {
 		artifactDigest, err = artifactDigestFromTargetDigest(digest, opts)
