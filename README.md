@@ -78,3 +78,17 @@ $ trivy referrer get localhost:5002/demo:app --digest 5b0306d | head
         "vendor": "aquasecurity",
 
 ```
+
+### Listing referrers recursively
+
+```
+$ trivy referrer tree localhost:500/demo:app
+Subject: localhost:5002/demo:app
+
+a5cb013
+├── 5b0306d: application/vnd.cyclonedx+json
+│   └── c248e29: application/vnd.cncf.notary.signature
+├── 771989f: application/spdx+json
+├── 83542d1: application/sarif+json
+└── 8b9f058: application/sarif+json
+```
