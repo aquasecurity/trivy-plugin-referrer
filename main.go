@@ -28,6 +28,11 @@ type listOptions struct {
 	FilterAnnotations map[string]string
 }
 
+type treeOptions struct {
+	Subject string
+	Full    bool
+}
+
 func keyValueSliceToMap(s []string) (map[string]string, error) {
 	m := make(map[string]string, len(s))
 	for _, kv := range s {
@@ -226,6 +231,43 @@ func main() {
 	listCmd.Flags().StringP("output", "o", "", "output file name")
 
 	rootCmd.AddCommand(listCmd)
+
+	treeCmd := &cobra.Command{
+		Use:     "tree",
+		Short:   "recurse into referrers and print the result as a tree",
+		Example: `  $ trivy referrer tree YOUR_IMAGE`,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			output := cmd.Flags().Lookup("output").Value.String()
+			var writer io.Writer
+			if output == "" {
+				writer = os.Stdout
+			} else {
+				fp, err := os.Create(output)
+				if err != nil {
+					return fmt.Errorf("error creating file: %w", err)
+				}
+				defer fp.Close()
+
+				writer = fp
+			}
+			full, err := cmd.Flags().GetBool("full")
+			if err != nil {
+				return fmt.Errorf("error getting full option: %w", err)
+			}
+
+			err = treeReferrers(writer, treeOptions{Subject: args[0], Full: full})
+			if err != nil {
+				return fmt.Errorf("error getting referrer: %w", err)
+			}
+
+			return nil
+		},
+	}
+	treeCmd.Flags().BoolP("full", "", false, "output the full digests")
+	treeCmd.Flags().StringP("output", "o", "", "output file name")
+
+	rootCmd.AddCommand(treeCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Logger.Fatal(err)
