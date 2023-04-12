@@ -37,17 +37,17 @@ func treeReferrers(w io.Writer, opts treeOptions) error {
 
 	writer.Write([]byte(fmt.Sprintf("Subject: %s\n\n", opts.Subject)))
 
-	tree := treeprint.NewWithRoot(FormatDigest(targetDigest.DigestStr()))
-	if err := recurseReferrers(tree, targetDigest); err != nil {
+	root := treeprint.NewWithRoot(FormatDigest(targetDigest.DigestStr()))
+	if err := recurseReferrers(root, targetDigest); err != nil {
 		return fmt.Errorf("error writing referrers: %w", err)
 	}
 
-	writer.Write([]byte(tree.String()))
+	writer.Write([]byte(root.String()))
 
 	return nil
 }
 
-func recurseReferrers(root treeprint.Tree, digest name.Digest) error {
+func recurseReferrers(node treeprint.Tree, digest name.Digest) error {
 	index, err := remote.Referrers(digest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return fmt.Errorf("error fetching referrers: %w", err)
@@ -58,7 +58,7 @@ func recurseReferrers(root treeprint.Tree, digest name.Digest) error {
 	}
 
 	for _, manifest := range index.Manifests {
-		node := root.AddBranch(fmt.Sprintf("%s: %s", FormatDigest(manifest.Digest.String()), manifest.ArtifactType))
+		branch := node.AddBranch(fmt.Sprintf("%s: %s", FormatDigest(manifest.Digest.String()), manifest.ArtifactType))
 
 		d, err := name.NewDigest(
 			fmt.Sprintf("%s/%s@%s", digest.RegistryStr(), digest.RepositoryStr(), manifest.Digest.String()),
@@ -67,7 +67,7 @@ func recurseReferrers(root treeprint.Tree, digest name.Digest) error {
 			return fmt.Errorf("error creating digest: %w", err)
 		}
 
-		if err := recurseReferrers(node, d); err != nil {
+		if err := recurseReferrers(branch, d); err != nil {
 			return fmt.Errorf("error writing referrers: %w", err)
 		}
 	}
