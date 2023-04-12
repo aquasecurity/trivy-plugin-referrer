@@ -73,6 +73,14 @@ func (r *referrer) Tag(img v1.Image) (name.Reference, error) {
 	return tag, nil
 }
 
+func newAnnotations(description string) map[string]string {
+	return map[string]string{
+		annotationKeyDescription:       description,
+		annotationKeyCreated:           time.Now().Format(time.RFC3339),
+		customAnnotationKeyDescription: "trivy",
+	}
+}
+
 func putReferrer(r io.Reader, opts putOptions) error {
 	ref, err := referrerFromReader(r, opts)
 	if err != nil {
@@ -169,10 +177,7 @@ func tryReferrerFromSBOM(r io.Reader, opts putOptions) (referrer, error) {
 			}
 		}
 
-		anns = map[string]string{
-			annotationKeyDescription: "CycloneDX JSON SBOM",
-			annotationKeyCreated:     time.Now().Format(time.RFC3339),
-		}
+		anns = newAnnotations("CycloneDX JSON SBOM")
 		mediaType = mediaKeyCycloneDX
 
 	case sbom.FormatSPDXJSON:
@@ -188,10 +193,7 @@ func tryReferrerFromSBOM(r io.Reader, opts putOptions) (referrer, error) {
 			}
 		}
 
-		anns = map[string]string{
-			annotationKeyDescription: "SPDX JSON SBOM",
-			annotationKeyCreated:     time.Now().Format(time.RFC3339),
-		}
+		anns = newAnnotations("SPDX JSON SBOM")
 		mediaType = mediaKeySPDX
 
 	default:
@@ -263,10 +265,7 @@ func tryReferrerFromSarif(r io.Reader, opts putOptions) (referrer, error) {
 	}
 	log.Logger.Infof("SARIF detected")
 
-	anns := map[string]string{
-		annotationKeyDescription: "SARIF",
-		annotationKeyCreated:     time.Now().Format(time.RFC3339),
-	}
+	anns := newAnnotations("SARIF")
 	anns = lo.Assign(anns, opts.Annotations)
 
 	return referrer{
@@ -308,10 +307,7 @@ func tryReferrerFromVulnerability(r io.Reader, opts putOptions) (referrer, error
 
 	log.Logger.Infof("Cosign vulnerability data detected")
 
-	anns := map[string]string{
-		annotationKeyDescription: "Vulnerability Scan Report",
-		annotationKeyCreated:     time.Now().Format(time.RFC3339),
-	}
+	anns := newAnnotations("Cosign Vulnerability Data")
 	anns = lo.Assign(anns, opts.Annotations)
 
 	return referrer{
