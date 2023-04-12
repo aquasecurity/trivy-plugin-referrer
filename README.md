@@ -38,3 +38,43 @@ $ trivy image -q -f sarif YOUR_IMAGE | trivy referrer put --subject YOUR_IMAGE
 ```
 $ trivy image -q -f cosign-vuln YOUR_IMAGE | trivy referrer put
 ```
+
+### Listing referrers
+```
+$ trivy referrer list localhost:5002/demo:app --type cyclonedx
+Subject:                                     localhost:5002/demo:app
+Referrers:                                    
+  Digest:                                    sha256:5b0306dbbe8252a9efaa7a5177d5ae313441aa85c3d994b2183726303fe52101
+  Reference:                                 localhost:5002/demo@sha256:5b0306dbbe8252a9efaa7a5177d5ae313441aa85c3d994b2183726303fe52101
+  MediaType:                                 application/vnd.oci.image.manifest.v1+json
+  ArtifactType:                              application/vnd.cyclonedx+json
+  Annotations:                               
+    created:                                 trivy
+    org.opencontainers.artifact.created:     2023-04-11T19:21:29+09:00
+    org.opencontainers.artifact.description: CycloneDX JSON SBOM
+
+
+$ trivy referrer list localhost:5002/demo:app --format table
+DIGEST  TYPE      ANNOTATIONS    DESCRIPTION         CREATED
+5b0306d cyclonedx created=trivy  CycloneDX JSON SBOM 22 hours ago
+771989f spdx-json created=trivy  SPDX JSON SBOM      22 hours ago
+83542d1 sarif                    SARIF               18 hours ago
+8b9f058 sarif                    SARIF               15 hours ago
+```
+
+### Getting the artifact
+
+```
+$ trivy referrer get localhost:5002/demo:app --digest 5b0306d | head
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "serialNumber": "urn:uuid:2512b7b2-ed10-4526-9b64-dc32869eb401",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-04-11T10:21:29+00:00",
+    "tools": [
+      {
+        "vendor": "aquasecurity",
+
+```
