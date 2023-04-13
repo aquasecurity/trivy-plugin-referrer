@@ -9,6 +9,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/aquasecurity/table"
 	"github.com/fatih/color"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -17,11 +18,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/samber/lo"
 )
-
-const tableTemplate = `DIGEST	TYPE	ANNOTATIONS	DESCRIPTION	CREATED
-{{- range $index, $descriptor := .Manifests }}
-{{ $descriptor.Digest }}	{{ $descriptor.ArtifactType }}	{{ $descriptor.ShortAnnotations }}	{{ $descriptor.Description }}	{{ $descriptor.Created }}
-{{- end }}`
 
 const onelineTemplate = `{{- range $index, $descriptor := .Manifests }}
 {{ color $descriptor.Digest "yellow" }}	{{ color $descriptor.ArtifactType "cyan" }}	{{ $descriptor.ShortAnnotations }}
@@ -59,10 +55,24 @@ func (d *customDescriptor) ArtifactType() string {
 	return a.String()
 }
 
+func (d *customDescriptor) AnnotationsWithNewLine() string {
+	s := ""
+	for k, v := range d.Descriptor.Annotations {
+		if !IsCreatedKey(k) && !IsDescriptionKey(k) {
+			line := fmt.Sprintf("%s=%s", k, v)
+			if len(line) > 50 {
+				line = line[:50] + "..."
+			}
+			s += line + "\n"
+		}
+	}
+	return strings.TrimSuffix(s, "\n")
+}
+
 func (d *customDescriptor) ShortAnnotations() string {
 	s := ""
 	for k, v := range d.Descriptor.Annotations {
-		if k != annotationKeyCreated && k != annotationKeyDescription {
+		if !IsCreatedKey(k) && !IsDescriptionKey(k) {
 			s += fmt.Sprintf("%s=%s ", k, v)
 		}
 	}
@@ -71,7 +81,10 @@ func (d *customDescriptor) ShortAnnotations() string {
 
 func (d *customDescriptor) Description() string {
 	for k, v := range d.Descriptor.Annotations {
-		if k == annotationKeyDescription {
+		if IsDescriptionKey(k) {
+			if len(v) > 30 {
+				v = v[:30] + "..."
+			}
 			return v
 		}
 	}
@@ -80,7 +93,7 @@ func (d *customDescriptor) Description() string {
 
 func (d *customDescriptor) Created() string {
 	for k, v := range d.Descriptor.Annotations {
-		if k == annotationKeyCreated {
+		if IsCreatedKey(k) {
 			t, err := time.Parse(time.RFC3339, v)
 			if err != nil {
 				return ""
@@ -164,6 +177,25 @@ func (jr jsonReporter) Report(w io.Writer, data data) error {
 	return nil
 }
 
+type tableReporter struct{}
+
+func (tr tableReporter) Report(w io.Writer, data data) error {
+
+	t := table.New(w)
+	t.SetHeaders("DIGEST", "TYPE", "ANNOTATIONS", "DESCRIPTION", "CREATED")
+	t.SetHeaderStyle(table.StyleBold)
+
+	for _, m := range data.Manifests {
+		t.AddRow(
+			m.Digest(), m.ArtifactType(), m.AnnotationsWithNewLine(), m.Description(), m.Created(),
+		)
+	}
+
+	t.Render()
+
+	return nil
+}
+
 type templateReporter struct {
 	template string
 }
@@ -240,7 +272,7 @@ func listReferrers(writer io.Writer, opts listOptions) error {
 	if opts.Format == "json" {
 		re = jsonReporter{}
 	} else if opts.Format == "table" {
-		re = templateReporter{template: tableTemplate}
+		re = tableReporter{}
 	} else if opts.Format == "oneline" {
 		re = templateReporter{template: onelineTemplate}
 	} else {

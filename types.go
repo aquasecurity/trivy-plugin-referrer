@@ -7,6 +7,9 @@ const (
 	annotationKeyCreated     = "org.opencontainers.artifact.created"
 	annotationKeyDescription = "org.opencontainers.artifact.description"
 
+	annotationKeyImageCreated     = "org.opencontainers.image.created"
+	annotationKeyImageDescription = "org.opencontainers.image.description"
+
 	customAnnotationKeyDescription = "created-by"
 
 	// Use a Media Type registered with IANA.
@@ -27,6 +30,14 @@ const (
 	SARIF      ArtifactType = "sarif"
 	CosignVuln ArtifactType = "cosign-vuln"
 )
+
+func IsCreatedKey(key string) bool {
+	return key == annotationKeyCreated || key == annotationKeyImageCreated
+}
+
+func IsDescriptionKey(key string) bool {
+	return key == annotationKeyDescription || key == annotationKeyImageDescription
+}
 
 func (at ArtifactType) String() string {
 	return string(at)
