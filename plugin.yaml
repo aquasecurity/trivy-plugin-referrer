@@ -1,6 +1,6 @@
 name: "referrer"
 repository: github.com/aquasecurity/trivy-plugin-referrer
-version: "0.1.3"
+version: "0.1.4"
 usage: Put referrers to OCI registry
 description: |-
   A Trivy plugin for OCI referrers
@@ -9,20 +9,20 @@ platforms:
   - selector:
       os: darwin
       arch: amd64
-    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.3/trivy_plugin_referrer_0.1.3_macOS-64bit.tar.gz
+    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.4/trivy_plugin_referrer_0.1.4_macOS-64bit.tar.gz
     bin: ./referrer
   - selector:
       os: darwin
       arch: arm64
-    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.3/trivy_plugin_referrer_0.1.3_macOS-ARM64.tar.gz
+    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.4/trivy_plugin_referrer_0.1.4_macOS-ARM64.tar.gz
     bin: ./referrer
   - selector:
       os: linux
       arch: amd64
-    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.3/trivy_plugin_referrer_0.1.3_Linux-64bit.tar.gz
+    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.4/trivy_plugin_referrer_0.1.4_Linux-64bit.tar.gz
     bin: ./referrer
   - selector:
       os: linux
       arch: arm64
-    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.3/trivy_plugin_referrer_0.1.3_Linux-ARM64.tar.gz
+    uri: https://github.com/aquasecurity/trivy-plugin-referrer/releases/download/v0.1.4/trivy_plugin_referrer_0.1.4_Linux-ARM64.tar.gz
     bin: ./referrer
