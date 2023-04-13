@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/samber/lo"
 )
 
@@ -217,8 +218,15 @@ func listReferrers(writer io.Writer, opts listOptions) error {
 	}
 
 	index, err := remote.Referrers(targetDigest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+
 	if err != nil {
-		return fmt.Errorf("error fetching referrers: %w", err)
+		if e, ok := err.(*transport.Error); ok && e.StatusCode == 404 {
+			// If the OCI registry returns 404, process it as an index with no referrer. This happens when the OCI registry does not support
+			// the referrers API.
+			index = &v1.IndexManifest{}
+		} else {
+			return fmt.Errorf("error fetching referrers: %w", err)
+		}
 	}
 
 	filtered := index.DeepCopy()

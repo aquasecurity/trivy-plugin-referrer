@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/xlab/treeprint"
 )
 
@@ -49,7 +50,13 @@ func treeReferrers(w io.Writer, opts treeOptions) error {
 
 func recurseReferrers(node treeprint.Tree, digest name.Digest) error {
 	index, err := remote.Referrers(digest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+
 	if err != nil {
+		if e, ok := err.(*transport.Error); ok && e.StatusCode == 404 {
+			// If the OCI registry returns 404, process it as an index with no referrer. This happens when the OCI registry does not support
+			// the referrers API.
+			return nil
+		}
 		return fmt.Errorf("error fetching referrers: %w", err)
 	}
 
