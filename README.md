@@ -49,17 +49,17 @@ Referrers:
   MediaType:                                 application/vnd.oci.image.manifest.v1+json
   ArtifactType:                              application/vnd.cyclonedx+json
   Annotations:                               
-    created:                                 trivy
+    created-by:                              trivy
     org.opencontainers.artifact.created:     2023-04-11T19:21:29+09:00
     org.opencontainers.artifact.description: CycloneDX JSON SBOM
 
 
 $ trivy referrer list localhost:5002/demo:app --format table
-DIGEST  TYPE      ANNOTATIONS    DESCRIPTION         CREATED
-5b0306d cyclonedx created=trivy  CycloneDX JSON SBOM 22 hours ago
-771989f spdx-json created=trivy  SPDX JSON SBOM      22 hours ago
-83542d1 sarif                    SARIF               18 hours ago
-8b9f058 sarif                    SARIF               15 hours ago
+DIGEST  TYPE      ANNOTATIONS       DESCRIPTION         CREATED
+5b0306d cyclonedx created-by=trivy  CycloneDX JSON SBOM 22 hours ago
+771989f spdx-json created-by=trivy  SPDX JSON SBOM      22 hours ago
+83542d1 sarif     created-by=trivy  SARIF               18 hours ago
+8b9f058 sarif     created-by=trivy  SARIF               15 hours ago
 ```
 
 ### Getting the artifact

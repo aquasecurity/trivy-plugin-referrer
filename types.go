@@ -7,6 +7,8 @@ const (
 	annotationKeyCreated     = "org.opencontainers.artifact.created"
 	annotationKeyDescription = "org.opencontainers.artifact.description"
 
+	customAnnotationKeyDescription = "created-by"
+
 	// Use a Media Type registered with IANA.
 	// ref. https://github.com/opencontainers/image-spec/blob/dd7fd714f5406d39db5fd0602a0e6090929dc85e/artifact.md#artifact-manifest-property-descriptions
 	// ref. https://www.iana.org/assignments/media-types/media-types.xhtml
