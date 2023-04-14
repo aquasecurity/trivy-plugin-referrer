@@ -245,7 +245,7 @@ func tryReferrerFromSarif(r io.Reader, opts putOptions) (referrer, error) {
 	}
 
 	// A naive detection would be to check whether the $schema contains ‘sarif.’
-	// Trivy v0.38.3 generate the following schema:
+	// Trivy generates the following schema:
 	//   https://json.schemastore.org/sarif-2.1.0-rtm.5.json
 	if !strings.Contains(sa.Schema, "sarif") {
 		return referrer{}, errFailedSARIFDetection
