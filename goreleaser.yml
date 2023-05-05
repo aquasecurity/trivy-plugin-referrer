@@ -29,3 +29,4 @@ archives:
       - README.md
       - LICENSE
       - contrib/*.tpl
+      - plugin.yaml
