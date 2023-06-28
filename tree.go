@@ -23,12 +23,11 @@ func FormatDigest(digest string) string {
 }
 
 func treeReferrers(w io.Writer, opts treeOptions) error {
-
 	if opts.Full {
 		digestFull = true
 	}
 
-	targetDigest, err := fetchTargetDigest(opts.Subject)
+	targetDigest, err := fetchTargetDigest(opts.Subject, opts.Insecure)
 	if err != nil {
 		return fmt.Errorf("error getting digest: %w", err)
 	}

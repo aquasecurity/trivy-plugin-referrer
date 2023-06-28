@@ -21,18 +21,20 @@ func getReferrer(writer io.Writer, opts getOptions) error {
 	var err error
 	var artifactDigest name.Digest
 
-	ref, err := name.ParseReference(opts.Reference)
+	ref, err := name.ParseReference(opts.Reference, opts.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("error parsing reference: %w", err)
 	}
 
-	desc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	remoteOpts := append(opts.RemoteOptions(), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	desc, err := remote.Head(ref, remoteOpts...)
 	if err != nil {
 		return fmt.Errorf("error getting descriptor: %w", err)
 	}
 
 	digest, err := name.NewDigest(
 		fmt.Sprintf("%s/%s@%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr(), desc.Digest.String()),
+		opts.NameOptions()...,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating digest: %w", err)
@@ -47,7 +49,7 @@ func getReferrer(writer io.Writer, opts getOptions) error {
 		return fmt.Errorf("error getting artifact digest: %w", err)
 	}
 
-	image, err := remote.Image(artifactDigest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	image, err := remote.Image(artifactDigest, remoteOpts...)
 	if err != nil {
 		return fmt.Errorf("error fetching image: %w", err)
 	}
@@ -62,7 +64,9 @@ func getReferrer(writer io.Writer, opts getOptions) error {
 		return fmt.Errorf("error getting artifact: %w", err)
 	}
 
-	io.Copy(writer, artifact)
+	if _, err = io.Copy(writer, artifact); err != nil {
+		return fmt.Errorf("error copying artifact: %w", err)
+	}
 
 	return nil
 }
@@ -90,6 +94,7 @@ func findArtifactDigest(digest name.Digest, opts getOptions) (name.Digest, error
 
 	artifactDigest, err := name.NewDigest(
 		fmt.Sprintf("%s/%s@%s", digest.Context().RegistryStr(), digest.Context().RepositoryStr(), manifest.Digest.String()),
+		opts.NameOptions()...,
 	)
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error parsing artifact tag: %w", err)
