@@ -9,7 +9,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/aquasecurity/table"
 	"github.com/fatih/color"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -17,6 +16,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/samber/lo"
+
+	"github.com/aquasecurity/table"
 )
 
 const onelineTemplate = `{{- range $index, $descriptor := .Manifests }}
@@ -222,19 +223,21 @@ func (tr templateReporter) Report(w io.Writer, data data) error {
 	return nil
 }
 
-func fetchTargetDigest(subject string) (name.Digest, error) {
-	ref, err := name.ParseReference(subject)
+func fetchTargetDigest(subject string, insecure Insecure) (name.Digest, error) {
+	ref, err := name.ParseReference(subject, insecure.NameOptions()...)
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error parsing reference: %w", err)
 	}
 
-	desc, err := remote.Head(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	remoteOpts := append(insecure.RemoteOptions(), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	desc, err := remote.Head(ref, remoteOpts...)
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error getting descriptor: %w", err)
 	}
 
 	digest, err := name.NewDigest(
 		fmt.Sprintf("%s/%s@%s", ref.Context().RegistryStr(), ref.Context().RepositoryStr(), desc.Digest.String()),
+		insecure.NameOptions()...,
 	)
 	if err != nil {
 		return name.Digest{}, fmt.Errorf("error creating digest: %w", err)
@@ -244,12 +247,13 @@ func fetchTargetDigest(subject string) (name.Digest, error) {
 }
 
 func listReferrers(writer io.Writer, opts listOptions) error {
-	targetDigest, err := fetchTargetDigest(opts.Subject)
+	targetDigest, err := fetchTargetDigest(opts.Subject, opts.Insecure)
 	if err != nil {
 		return fmt.Errorf("error getting digest: %w", err)
 	}
 
-	index, err := remote.Referrers(targetDigest, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	remoteOpts := append(opts.RemoteOptions(), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	index, err := remote.Referrers(targetDigest, remoteOpts...)
 
 	if err != nil {
 		if e, ok := err.(*transport.Error); ok && e.StatusCode == 404 {

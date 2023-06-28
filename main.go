@@ -1,29 +1,49 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/aquasecurity/trivy/pkg/log"
 )
 
+type Insecure bool
+
+func (i Insecure) NameOptions() []name.Option {
+	return lo.Ternary(bool(i), []name.Option{name.Insecure}, nil)
+}
+
+func (i Insecure) RemoteOptions() []remote.Option {
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: bool(i)}
+	return []remote.Option{remote.WithTransport(tr)}
+}
+
 type putOptions struct {
+	Insecure
 	Annotations map[string]string
 	Subject     string
 }
 
 type getOptions struct {
+	Insecure
 	Type      string
 	Reference string
 	Digest    string
 }
 
 type listOptions struct {
+	Insecure
 	Type              string
 	Subject           string
 	Format            string
@@ -31,6 +51,7 @@ type listOptions struct {
 }
 
 type treeOptions struct {
+	Insecure
 	Subject string
 	Full    bool
 }
@@ -68,6 +89,8 @@ func main() {
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress log output")
 	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
+	rootCmd.PersistentFlags().Bool("insecure", false, "allow insecure server connections")
+	viper.BindPFlag("insecure", rootCmd.PersistentFlags().Lookup("insecure"))
 
 	putCmd := &cobra.Command{
 		Use:   "put",
@@ -91,15 +114,17 @@ func main() {
 				reader = os.Stdin
 			}
 
-			subject := viper.GetString("subject")
 			annList := viper.GetStringSlice("annotation")
-
 			ann, err := keyValueSliceToMap(annList)
 			if err != nil {
 				return fmt.Errorf("error parsing annotations: %w", err)
 			}
 
-			err = putReferrer(reader, putOptions{Annotations: ann, Subject: subject})
+			err = putReferrer(reader, putOptions{
+				Annotations: ann,
+				Subject:     viper.GetString("subject"),
+				Insecure:    Insecure(viper.GetBool("insecure")),
+			})
 			if err != nil {
 				return fmt.Errorf("error putting referrer: %w", err)
 			}
@@ -141,6 +166,7 @@ func main() {
 			digest := viper.GetString("digest")
 
 			err := getReferrer(writer, getOptions{
+				Insecure:  Insecure(viper.GetBool("insecure")),
 				Type:      t,
 				Digest:    digest,
 				Reference: args[0],
@@ -191,6 +217,7 @@ func main() {
 			}
 
 			err = listReferrers(writer, listOptions{
+				Insecure:          Insecure(viper.GetBool("insecure")),
 				Type:              t,
 				Subject:           args[0],
 				Format:            format,
@@ -235,7 +262,11 @@ func main() {
 			}
 			full := viper.GetBool("full")
 
-			err := treeReferrers(writer, treeOptions{Subject: args[0], Full: full})
+			err := treeReferrers(writer, treeOptions{
+				Insecure: Insecure(viper.GetBool("insecure")),
+				Subject:  args[0],
+				Full:     full,
+			})
 			if err != nil {
 				return fmt.Errorf("error getting referrer: %w", err)
 			}
