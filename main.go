@@ -6,8 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aquasecurity/trivy/pkg/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/aquasecurity/trivy/pkg/log"
 )
 
 type putOptions struct {
@@ -46,18 +48,14 @@ func keyValueSliceToMap(s []string) (map[string]string, error) {
 }
 
 func main() {
+	viper.SetEnvPrefix("trivy")
+	viper.AutomaticEnv()
+
 	rootCmd := &cobra.Command{
 		Short: "A Trivy plugin for oci referrers",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			debug, err := cmd.Flags().GetBool("debug")
-			if err != nil {
-				return fmt.Errorf("error getting debug flag: %w", err)
-			}
-
-			quiet, err := cmd.Flags().GetBool("quiet")
-			if err != nil {
-				return fmt.Errorf("error getting quiet flag: %w", err)
-			}
+			debug := viper.GetBool("debug")
+			quiet := viper.GetBool("quiet")
 
 			if err := log.InitLogger(debug, quiet); err != nil {
 				return err
@@ -67,7 +65,9 @@ func main() {
 		},
 	}
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "debug mode")
+	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress log output")
+	viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 
 	putCmd := &cobra.Command{
 		Use:   "put",
@@ -76,10 +76,7 @@ func main() {
   # Put SBOM attestation
   trivy referrer put -f sbom.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := cmd.Flags().GetString("file")
-			if err != nil {
-				return fmt.Errorf("error getting file path: %w", err)
-			}
+			path := viper.GetString("file")
 
 			var reader io.Reader
 			if path != "" {
@@ -94,15 +91,8 @@ func main() {
 				reader = os.Stdin
 			}
 
-			subject, err := cmd.Flags().GetString("subject")
-			if err != nil {
-				return fmt.Errorf("error getting subject: %w", err)
-			}
-
-			annList, err := cmd.Flags().GetStringSlice("annotation")
-			if err != nil {
-				return fmt.Errorf("error getting annotations: %w", err)
-			}
+			subject := viper.GetString("subject")
+			annList := viper.GetStringSlice("annotation")
 
 			ann, err := keyValueSliceToMap(annList)
 			if err != nil {
@@ -118,8 +108,11 @@ func main() {
 		},
 	}
 	putCmd.Flags().StringP("file", "f", "", "file path. If a file path is not specified, it will accept input from the standard input.")
+	viper.BindPFlag("file", putCmd.Flags().Lookup("file"))
 	putCmd.Flags().StringSliceP("annotation", "", nil, "annotations associated with the artifact (can specify multiple or separate values with commas: key1=path1,key2=path2)")
+	viper.BindPFlag("annotation", putCmd.Flags().Lookup("annotation"))
 	putCmd.Flags().StringP("subject", "", "", "set the subject to a reference (If the value is not set, it will attempt to detect it automatically from the input)")
+	viper.BindPFlag("subject", putCmd.Flags().Lookup("subject"))
 
 	rootCmd.AddCommand(putCmd)
 
@@ -130,7 +123,7 @@ func main() {
 		Example: `  $ trivy referrer get --type cyclonedx YOUR_IMAGE
   $ trivy referrer get --digest DIGEST YOUR_IMAGE`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			output := cmd.Flags().Lookup("output").Value.String()
+			output := viper.GetString("output")
 			var writer io.Writer
 			if output == "" {
 				writer = os.Stdout
@@ -144,17 +137,10 @@ func main() {
 				writer = fp
 			}
 
-			t, err := cmd.Flags().GetString("type")
-			if err != nil {
-				return fmt.Errorf("error getting file path: %w", err)
-			}
+			t := viper.GetString("type")
+			digest := viper.GetString("digest")
 
-			digest, err := cmd.Flags().GetString("digest")
-			if err != nil {
-				return fmt.Errorf("error getting digest: %w", err)
-			}
-
-			err = getReferrer(writer, getOptions{
+			err := getReferrer(writer, getOptions{
 				Type:      t,
 				Digest:    digest,
 				Reference: args[0],
@@ -167,8 +153,11 @@ func main() {
 		},
 	}
 	getCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
+	viper.BindPFlag("type", putCmd.Flags().Lookup("type"))
 	getCmd.Flags().StringP("digest", "", "", "referrer digest. If the length of the digest is only partial, search for artifacts with matching prefixes")
+	viper.BindPFlag("digest", putCmd.Flags().Lookup("digest"))
 	getCmd.Flags().StringP("output", "o", "", "output file name")
+	viper.BindPFlag("output", putCmd.Flags().Lookup("output"))
 
 	rootCmd.AddCommand(getCmd)
 
@@ -178,7 +167,7 @@ func main() {
 		Example: `  $ trivy referrer list YOUR_IMAGE`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			output := cmd.Flags().Lookup("output").Value.String()
+			output := viper.GetString("output")
 			var writer io.Writer
 			if output == "" {
 				writer = os.Stdout
@@ -192,20 +181,9 @@ func main() {
 				writer = fp
 			}
 
-			t, err := cmd.Flags().GetString("type")
-			if err != nil {
-				return fmt.Errorf("error getting file path: %w", err)
-			}
-
-			format, err := cmd.Flags().GetString("format")
-			if err != nil {
-				return fmt.Errorf("error getting format: %w", err)
-			}
-
-			annList, err := cmd.Flags().GetStringSlice("filter-annotation")
-			if err != nil {
-				return fmt.Errorf("error getting filter-annotations: %w", err)
-			}
+			t := viper.GetString("type")
+			format := viper.GetString("format")
+			annList := viper.GetStringSlice("filter-annotation")
 
 			ann, err := keyValueSliceToMap(annList)
 			if err != nil {
@@ -226,9 +204,13 @@ func main() {
 		},
 	}
 	listCmd.Flags().StringSliceP("filter-annotation", "", nil, "filter annotations associated with the artifact (can specify multiple or separate values with commas: key1=path1,key2=path2)")
+	viper.BindPFlag("filter-annotation", listCmd.Flags().Lookup("filter-annotation"))
 	listCmd.Flags().StringP("format", "", "", "format (json, oneline, table)")
+	viper.BindPFlag("format", listCmd.Flags().Lookup("format"))
 	listCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
+	viper.BindPFlag("type", listCmd.Flags().Lookup("type"))
 	listCmd.Flags().StringP("output", "o", "", "output file name")
+	viper.BindPFlag("output", listCmd.Flags().Lookup("output"))
 
 	rootCmd.AddCommand(listCmd)
 
@@ -238,7 +220,7 @@ func main() {
 		Example: `  $ trivy referrer tree YOUR_IMAGE`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			output := cmd.Flags().Lookup("output").Value.String()
+			output := viper.GetString("output")
 			var writer io.Writer
 			if output == "" {
 				writer = os.Stdout
@@ -251,12 +233,9 @@ func main() {
 
 				writer = fp
 			}
-			full, err := cmd.Flags().GetBool("full")
-			if err != nil {
-				return fmt.Errorf("error getting full option: %w", err)
-			}
+			full := viper.GetBool("full")
 
-			err = treeReferrers(writer, treeOptions{Subject: args[0], Full: full})
+			err := treeReferrers(writer, treeOptions{Subject: args[0], Full: full})
 			if err != nil {
 				return fmt.Errorf("error getting referrer: %w", err)
 			}
@@ -265,7 +244,9 @@ func main() {
 		},
 	}
 	treeCmd.Flags().BoolP("full", "", false, "output the full digests")
+	viper.BindPFlag("full", listCmd.Flags().Lookup("full"))
 	treeCmd.Flags().StringP("output", "o", "", "output file name")
+	viper.BindPFlag("output", listCmd.Flags().Lookup("output"))
 
 	rootCmd.AddCommand(treeCmd)
 
