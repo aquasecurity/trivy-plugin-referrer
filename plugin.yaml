@@ -1,6 +1,6 @@
 name: "referrer"
 repository: github.com/aquasecurity/trivy-plugin-referrer
-version: "0.1.5"
+version: "0.2.0"
 usage: Put referrers to OCI registry
 description: |-
   A Trivy plugin for OCI referrers
