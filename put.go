@@ -340,9 +340,9 @@ func repoFromPURL(purlStr string, opts putOptions) (name.Reference, error) {
 	return digest, nil
 }
 
-func repoFromSPDX(spdx spdx.Document2_2, opts putOptions) (name.Reference, error) {
+func repoFromSPDX(spdx spdx.Document, opts putOptions) (name.Reference, error) {
 	for _, pkg := range spdx.Packages {
-		if pkg.PackageName == spdx.CreationInfo.DocumentName {
+		if pkg.PackageName == spdx.DocumentName {
 			for _, ref := range pkg.PackageExternalReferences {
 				if ref.Category == "PACKAGE-MANAGER" {
 					return repoFromPURL(ref.Locator, opts)

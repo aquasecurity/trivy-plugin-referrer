@@ -102,13 +102,18 @@ func findArtifactDigest(digest name.Digest, opts getOptions) (name.Digest, error
 	return artifactDigest, nil
 }
 
-func findReferrerByDigest(index *v1.IndexManifest, opts getOptions) (v1.Descriptor, error) {
+func findReferrerByDigest(index v1.ImageIndex, opts getOptions) (v1.Descriptor, error) {
 	digest := opts.Digest
 	if !strings.HasPrefix(digest, "sha256:") {
 		digest = "sha256:" + digest
 	}
 
-	m, found := lo.Find(index.Manifests, func(item v1.Descriptor) bool {
+	indexManifest, err := index.IndexManifest()
+	if err != nil {
+		return v1.Descriptor{}, fmt.Errorf("error getting index manifest: %w", err)
+	}
+
+	m, found := lo.Find(indexManifest.Manifests, func(item v1.Descriptor) bool {
 		return strings.HasPrefix(item.Digest.String(), digest)
 	})
 	if !found {
@@ -117,14 +122,19 @@ func findReferrerByDigest(index *v1.IndexManifest, opts getOptions) (v1.Descript
 	return m, nil
 }
 
-func findLatestReferrerByType(index *v1.IndexManifest, opts getOptions) (v1.Descriptor, error) {
+func findLatestReferrerByType(imageIndex v1.ImageIndex, opts getOptions) (v1.Descriptor, error) {
 
 	artifactType, err := artifactTypeFromName(opts.Type)
 	if err != nil {
 		return v1.Descriptor{}, fmt.Errorf("error getting artifact type: %w", err)
 	}
 
-	filtered := lo.Filter(index.Manifests, func(item v1.Descriptor, index int) bool {
+	indexManifest, err := imageIndex.IndexManifest()
+	if err != nil {
+		return v1.Descriptor{}, fmt.Errorf("error getting index manifest: %w", err)
+	}
+
+	filtered := lo.Filter(indexManifest.Manifests, func(item v1.Descriptor, index int) bool {
 		return item.ArtifactType == artifactType.MediaType()
 	})
 

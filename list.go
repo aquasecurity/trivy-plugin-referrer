@@ -14,7 +14,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/samber/lo"
 
 	"github.com/aquasecurity/table"
@@ -253,16 +252,14 @@ func listReferrers(writer io.Writer, opts listOptions) error {
 	}
 
 	remoteOpts := append(opts.RemoteOptions(), remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	index, err := remote.Referrers(targetDigest, remoteOpts...)
-
+	imageIndex, err := remote.Referrers(targetDigest, remoteOpts...)
 	if err != nil {
-		if e, ok := err.(*transport.Error); ok && e.StatusCode == 404 {
-			// If the OCI registry returns 404, process it as an index with no referrer. This happens when the OCI registry does not support
-			// the referrers API.
-			index = &v1.IndexManifest{}
-		} else {
-			return fmt.Errorf("error fetching referrers: %w", err)
-		}
+		return fmt.Errorf("error fetching referrers: %w", err)
+	}
+
+	index, err := imageIndex.IndexManifest()
+	if err != nil {
+		return fmt.Errorf("error getting index manifest: %w", err)
 	}
 
 	filtered := index.DeepCopy()
