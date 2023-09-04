@@ -179,11 +179,11 @@ func main() {
 		},
 	}
 	getCmd.Flags().StringP("type", "", "", "artifact type (cyclonedx, spdx-json, sarif, cosign-vuln)")
-	viper.BindPFlag("type", putCmd.Flags().Lookup("type"))
+	viper.BindPFlag("type", getCmd.Flags().Lookup("type"))
 	getCmd.Flags().StringP("digest", "", "", "referrer digest. If the length of the digest is only partial, search for artifacts with matching prefixes")
-	viper.BindPFlag("digest", putCmd.Flags().Lookup("digest"))
+	viper.BindPFlag("digest", getCmd.Flags().Lookup("digest"))
 	getCmd.Flags().StringP("output", "o", "", "output file name")
-	viper.BindPFlag("output", putCmd.Flags().Lookup("output"))
+	viper.BindPFlag("output", getCmd.Flags().Lookup("output"))
 
 	rootCmd.AddCommand(getCmd)
 
@@ -275,9 +275,9 @@ func main() {
 		},
 	}
 	treeCmd.Flags().BoolP("full", "", false, "output the full digests")
-	viper.BindPFlag("full", listCmd.Flags().Lookup("full"))
+	viper.BindPFlag("full", treeCmd.Flags().Lookup("full"))
 	treeCmd.Flags().StringP("output", "o", "", "output file name")
-	viper.BindPFlag("output", listCmd.Flags().Lookup("output"))
+	viper.BindPFlag("output", treeCmd.Flags().Lookup("output"))
 
 	rootCmd.AddCommand(treeCmd)
 
