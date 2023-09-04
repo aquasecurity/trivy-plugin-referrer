@@ -102,7 +102,8 @@ func putReferrer(r io.Reader, opts putOptions) error {
 
 	log.Logger.Infof("Pushing referrer to %s", tag.String())
 
-	if err = remote.Write(tag, img, ref.RemoteOptions()...); err != nil {
+	remoteOpts := append(ref.RemoteOptions(), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err = remote.Write(tag, img, remoteOpts...); err != nil {
 		return fmt.Errorf("error pushing referrer: %w", err)
 	}
 
