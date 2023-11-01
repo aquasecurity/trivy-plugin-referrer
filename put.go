@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ctypes "github.com/google/go-containerregistry/pkg/v1/types"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/owenrumney/go-sarif/sarif"
 	"github.com/samber/lo"
 	"github.com/spdx/tools-golang/spdx"
@@ -52,7 +53,7 @@ func (r *referrer) Image() (v1.Image, error) {
 		return nil, fmt.Errorf("error getting descriptor: %w", err)
 	}
 
-	img = mutate.MediaType(img, targetDesc.MediaType)
+	img = mutate.MediaType(img, ocispec.MediaTypeImageManifest)
 	img = mutate.ConfigMediaType(img, r.mediaType)
 	img = mutate.Annotations(img, r.annotations).(v1.Image)
 	img = mutate.Subject(img, *targetDesc).(v1.Image)

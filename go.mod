@@ -7,6 +7,7 @@ require (
 	github.com/aquasecurity/trivy v0.44.1
 	github.com/fatih/color v1.15.0
 	github.com/google/go-containerregistry v0.16.1
+	github.com/opencontainers/image-spec v1.1.0-rc5
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/samber/lo v1.38.1
 	github.com/spdx/tools-golang v0.5.3
@@ -45,7 +46,6 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/package-url/packageurl-go v0.1.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
