@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ctypes "github.com/google/go-containerregistry/pkg/v1/types"
@@ -30,6 +33,7 @@ import (
 var errFailedSBOMDetection = fmt.Errorf("failed to detect SBOM")
 var errFailedSARIFDetection = fmt.Errorf("failed to detect SARIF")
 var errFailedVulnDetection = fmt.Errorf("failed to detect Cosign Vulnerability")
+var errFailedToWriteReferrer = fmt.Errorf("failed to write referrer")
 
 type referrer struct {
 	Insecure
@@ -39,7 +43,7 @@ type referrer struct {
 	targetReference name.Reference
 }
 
-func (r *referrer) Image() (v1.Image, error) {
+func (r *referrer) Image(useRemoteMediaType bool) (v1.Image, error) {
 	img, err := mutate.Append(empty.Image, mutate.Addendum{
 		Layer: static.NewLayer(r.bytes, r.mediaType),
 	})
@@ -53,7 +57,12 @@ func (r *referrer) Image() (v1.Image, error) {
 		return nil, fmt.Errorf("error getting descriptor: %w", err)
 	}
 
-	img = mutate.MediaType(img, ocispec.MediaTypeImageManifest)
+	if useRemoteMediaType {
+		img = mutate.MediaType(img, targetDesc.MediaType)
+	} else {
+		img = mutate.MediaType(img, ocispec.MediaTypeImageManifest)
+	}
+
 	img = mutate.ConfigMediaType(img, r.mediaType)
 	img = mutate.Annotations(img, r.annotations).(v1.Image)
 	img = mutate.Subject(img, *targetDesc).(v1.Image)
@@ -85,13 +94,24 @@ func newAnnotations(description string) map[string]string {
 	}
 }
 
-func putReferrer(r io.Reader, opts putOptions) error {
-	ref, err := referrerFromReader(r, opts)
-	if err != nil {
-		return fmt.Errorf("error getting referrer: %w", err)
+func writeImage(tag name.Reference, img v1.Image, remoteOpts []remote.Option) error {
+	if err := remote.Write(tag, img, remoteOpts...); err != nil {
+		var terr *transport.Error
+		if errors.As(err, &terr) {
+			// There is no standardized status code for when the media type is rejected by OCI,
+			// but DockerHub returns a 404 in such cases.
+			// e.g. https://github.com/opencontainers/distribution-spec/blob/3940529fe6c0a068290b27fb3cd797cf0528bed6/spec.md#pushing-manifests
+			if terr.StatusCode == http.StatusNotFound {
+				return errFailedToWriteReferrer
+			}
+		}
+		return fmt.Errorf("error pushing referrer: %w", err)
 	}
+	return nil
+}
 
-	img, err := ref.Image()
+func tryPutReferrer(ref referrer, retryWithRemoteMediaType bool) error {
+	img, err := ref.Image(retryWithRemoteMediaType)
 	if err != nil {
 		return fmt.Errorf("error getting image: %w", err)
 	}
@@ -104,10 +124,28 @@ func putReferrer(r io.Reader, opts putOptions) error {
 	log.Logger.Infof("Pushing referrer to %s", tag.String())
 
 	remoteOpts := append(ref.RemoteOptions(), remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err = remote.Write(tag, img, remoteOpts...); err != nil {
-		return fmt.Errorf("error pushing referrer: %w", err)
+	return writeImage(tag, img, remoteOpts)
+
+}
+
+func putReferrer(r io.Reader, opts putOptions) error {
+	ref, err := referrerFromReader(r, opts)
+	if err != nil {
+		return fmt.Errorf("error getting referrer: %w", err)
 	}
 
+	if err := tryPutReferrer(ref, false); err != nil {
+		if !errors.Is(err, errFailedToWriteReferrer) {
+			return fmt.Errorf("error pushing referrer: %w", err)
+		}
+
+		log.Logger.Infof("Retrying with remote media type")
+		if err := tryPutReferrer(ref, true); err != nil {
+			return fmt.Errorf("error pushing referrer: %w", err)
+		}
+	}
+
+	log.Logger.Infof("Successfully pushed referrer")
 	return nil
 }
 
