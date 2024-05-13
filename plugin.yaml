@@ -1,7 +1,9 @@
 name: "referrer"
-repository: github.com/aquasecurity/trivy-plugin-referrer
 version: "0.3.1"
-usage: Put referrers to OCI registry
+maintainer: aquasecurity
+repository: github.com/aquasecurity/trivy-plugin-referrer
+summary : Put referrers to OCI registry
+usage: Put referrers to OCI registry # for backward compatibility
 description: |-
   A Trivy plugin for OCI referrers
   Usage: trivy image -q -f cyclonedx IMAGE_NAME | trivy referrer put
